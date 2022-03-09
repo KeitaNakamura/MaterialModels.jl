@@ -3,11 +3,11 @@ struct DruckerPrager{Elastic <: ElasticModel} <: ElastoPlasticModel
     A::Float64
     B::Float64
     b::Float64
-    tension_cutoff::Float64
+    tensioncutoff::Float64
 end
 
 # for Mohr-Coulomb criterion
-function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real = ϕ, tension_cutoff::Union{Real, Bool} = 0) where {Elastic <: ElasticModel}
+function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real = ϕ, tensioncutoff::Union{Real, Bool} = 0) where {Elastic <: ElasticModel}
     mc_type = Symbol(mc_type)
     if mc_type == :circumscribed
         A = 6c*cos(ϕ) / (√3 * (3 - sin(ϕ)))
@@ -24,16 +24,16 @@ function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real = 
     else
         throw(ArgumentError("Choose Mohr-Coulomb type from :circumscribed, :inscribed and :plane_strain, got $mc_type"))
     end
-    tension_cutoff === true && throw(ArgumentError("Set value of mean stress limit to enable `tension_cutoff`"))
-    if tension_cutoff === false
-        tension_cutoff = Inf
+    tensioncutoff === true && throw(ArgumentError("Set value of mean stress limit to enable `tensioncutoff`"))
+    if tensioncutoff === false
+        tensioncutoff = Inf
     end
-    DruckerPrager{Elastic}(elastic, A, B, b, tension_cutoff)
+    DruckerPrager{Elastic}(elastic, A, B, b, tensioncutoff)
 end
 
 @matcalc_def function stress(model::DruckerPrager; D_e::SymmetricFourthOrderTensor{3}, σ_trial::SymmetricSecondOrderTensor{3})
     dfdσ, f_trial = gradient(σ_trial -> @matcalc(:yield_function, model; σ = σ_trial), σ_trial, :all)
-    p_t = model.tension_cutoff
+    p_t = model.tensioncutoff
     (f_trial ≤ 0.0 && mean(σ_trial) ≤ p_t) && return σ_trial
     dgdσ = @matcalc(:plastic_flow, model; σ = σ_trial)
     Δγ = f_trial / (dgdσ ⊡ D_e ⊡ dfdσ)
