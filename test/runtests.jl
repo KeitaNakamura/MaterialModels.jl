@@ -2,5 +2,28 @@ using Test
 using Random
 using MaterialModels
 
+@testset "Utilities" begin
+    @testset "@matcalc" begin
+        Random.seed!(1234)
+        m = LinearElastic(; E = rand(), K = rand())
+        σ = rand(SymmetricSecondOrderTensor{3})
+        dϵ = rand(SymmetricSecondOrderTensor{3})
+        @test @matcalc(:stress, m; σ, dϵ) ≈ @matcalc(:stress, m; dϵ, σ)
+    end
+    @testset "search_matcalc" begin
+        meths = @inferred(MaterialModels.search_matcalc())::Vector{Method}
+        @test all(str -> startswith(str, "matcalc_"), map(string, meths))
+        meths = @inferred(MaterialModels.search_matcalc(:stress))::Vector{Method}
+        @test all(str -> startswith(str, "matcalc_stress__"), map(string, meths))
+        # specify model
+        meths = @inferred(MaterialModels.search_matcalc(LinearElastic))::Vector{Method}
+        @test all(str -> startswith(str, "matcalc_"), map(string, meths))
+        @test all(m -> m.sig.parameters[2] <: LinearElastic, meths)
+        meths = @inferred(MaterialModels.search_matcalc(:stress, LinearElastic))::Vector{Method}
+        @test all(str -> startswith(str, "matcalc_stress__"), map(string, meths))
+        @test all(m -> m.sig.parameters[2] <: LinearElastic, meths)
+    end
+end
+
 include("LinearElastic.jl")
 include("DruckerPrager.jl")
