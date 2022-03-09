@@ -25,5 +25,11 @@ using MaterialModels
     end
 end
 
+# elastic models
 include("LinearElastic.jl")
+
+# elasto-plastic models
 include("DruckerPrager.jl")
+
+# fluids
+include("WaterEOS.jl")
