@@ -8,6 +8,17 @@ struct LinearElastic <: ElasticModel
     Dinv::SymmetricFourthOrderTensor{3, Float64, 36}
 end
 
+"""
+    LinearElastic(; parameters...)
+
+# Parameters
+Choose only 2 parameters.
+* `E`: Young's modulus
+* `K`: bulk modulus
+* `G`: shear modulus
+* `λ`: Lamé's first parameter
+* `ν`: Poisson's ratio
+"""
 function LinearElastic(; kwargs...)
     @assert length(kwargs) == 2
     params = values(kwargs)
@@ -81,18 +92,38 @@ function LinearElastic(; kwargs...)
     LinearElastic(E, K, G, λ, ν, D, inv(D))
 end
 
+"""
+    @matcalc(:stress, model::LinearElastic; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
+
+Compute stress.
+"""
 @matcalc_def function stress(model::LinearElastic; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
     σ + model.D ⊡ dϵ
 end
 
+"""
+    @matcalc(:stress, model::LinearElastic; ϵ::SymmetricSecondOrderTensor{3})
+
+Compute stress.
+"""
 @matcalc_def function stress(model::LinearElastic; ϵ::SymmetricSecondOrderTensor{3})
     model.D ⊡ ϵ
 end
 
+"""
+    @matcalc(:strain, model::LinearElastic; σ::SymmetricSecondOrderTensor{3})
+
+Compute strain.
+"""
 @matcalc_def function strain(model::LinearElastic; σ::SymmetricSecondOrderTensor{3})
     model.Dinv ⊡ σ
 end
 
+"""
+    @matcalc(:stiffness, model::LinearElastic)
+
+Return fourth-order stiffness tensor.
+"""
 @matcalc_def function stiffness(model::LinearElastic)
     model.D
 end
