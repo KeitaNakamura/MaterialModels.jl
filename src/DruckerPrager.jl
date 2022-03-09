@@ -3,6 +3,9 @@ struct DruckerPrager{Elastic <: ElasticModel} <: ElastoPlasticModel
     A::Float64
     B::Float64
     b::Float64
+    c::Float64
+    ϕ::Float64
+    ψ::Float64
     tensioncutoff::Float64
 end
 
@@ -28,7 +31,7 @@ function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real = 
     if tensioncutoff === false
         tensioncutoff = Inf
     end
-    DruckerPrager{Elastic}(elastic, A, B, b, tensioncutoff)
+    DruckerPrager{Elastic}(elastic, A, B, b, c, ϕ, ψ, tensioncutoff)
 end
 
 @matcalc_def function stress_status(model::DruckerPrager; D_e::SymmetricFourthOrderTensor{3}, σ_trial::SymmetricSecondOrderTensor{3})
