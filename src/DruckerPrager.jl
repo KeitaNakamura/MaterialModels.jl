@@ -31,10 +31,10 @@ function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real = 
     DruckerPrager{Elastic}(elastic, A, B, b, tensioncutoff)
 end
 
-@matcalc_def function stress(model::DruckerPrager; D_e::SymmetricFourthOrderTensor{3}, σ_trial::SymmetricSecondOrderTensor{3})
+@matcalc_def function stress_status(model::DruckerPrager; D_e::SymmetricFourthOrderTensor{3}, σ_trial::SymmetricSecondOrderTensor{3})
     dfdσ, f_trial = gradient(σ_trial -> @matcalc(:yield_function, model; σ = σ_trial), σ_trial, :all)
     p_t = model.tensioncutoff
-    (f_trial ≤ 0.0 && mean(σ_trial) ≤ p_t) && return σ_trial
+    (f_trial ≤ 0.0 && mean(σ_trial) ≤ p_t) && return (σ_trial, (plastic = false, tensioncutoff = false))
     dgdσ = @matcalc(:plastic_flow, model; σ = σ_trial)
     Δγ = f_trial / (dgdσ ⊡ D_e ⊡ dfdσ)
     σ = σ_trial - Δγ * (D_e ⊡ dgdσ)
@@ -60,14 +60,19 @@ end
             a = sqrt(2J₂ / (s ⊡ s))
             σ = p_t*I + a*s
         end
+        return (σ, (plastic = true, tensioncutoff = true))
     end
-    σ
+    (σ, (plastic = true, tensioncutoff = false))
+end
+
+@matcalc_def function stress_status(model::DruckerPrager{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
+    D_e = @matcalc(:stiffness, model.elastic)
+    σ_trial = @matcalc(:stress, model.elastic; σ, dϵ)
+    @matcalc(:stress_status, model; D_e, σ_trial)
 end
 
 @matcalc_def function stress(model::DruckerPrager{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
-    D_e = @matcalc(:stiffness, model.elastic)
-    σ_trial = @matcalc(:stress, model.elastic; σ, dϵ)
-    @matcalc(:stress, model; D_e, σ_trial)
+    first(@matcalc(:stress_status, model; σ, dϵ))
 end
 
 @matcalc_def function yield_function(model::DruckerPrager; σ::SymmetricSecondOrderTensor{3})

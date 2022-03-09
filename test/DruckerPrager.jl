@@ -3,6 +3,7 @@
         for mc_type in (:circumscribed, :inscribed, :plane_strain)
             Random.seed!(1234)
             stress(m, σ, dϵ) = @matcalc(:stress, m; σ, dϵ)
+            stress_status(m, σ, dϵ) = @matcalc(:stress_status, m; σ, dϵ)
             yield_function(m, σ) = @matcalc(:yield_function, m; σ)
 
             ## without tension-cutoff
@@ -20,28 +21,32 @@
             end
 
             ## with tension-cutoff
-            function recompute_stress(m, σ)
+            function check_tensioncutoff(m, σ)
                 dϵ = @matcalc(:strain, m.elastic; σ)
-                @inferred stress(m, zero(σ), dϵ)
+                σ, st = @inferred(stress_status(m, zero(σ), dϵ))
+                if !isinf(m.tensioncutoff)
+                    @test st.plastic && st.tensioncutoff
+                end
+                σ
             end
             m′ = @inferred DruckerPrager(elastic, mc_type, c = 20.0, ϕ = deg2rad(30), ψ = deg2rad(10), tensioncutoff = 20.0)
 
             # zone3 && closed to cap
             σ = 20I + rand(SymmetricSecondOrderTensor{3})
             @test @matcalc(:yield_function, m′; σ) < 0
-            @test mean(recompute_stress(m′, σ)) ≈ 20.0
+            @test mean(check_tensioncutoff(m′, σ)) ≈ 20.0
 
             # zone3 && far from cap
             σ = 50I + rand(SymmetricSecondOrderTensor{3})
             @test @matcalc(:yield_function, m′; σ) > 0
-            @test mean(recompute_stress(m′, σ)) ≈ 20.0
+            @test mean(check_tensioncutoff(m′, σ)) ≈ 20.0
 
             # zone2
             σ = 50*(I + dev(rand(SymmetricSecondOrderTensor{3})))
             @test @matcalc(:yield_function, m′; σ) > 0
-            @test mean(recompute_stress(m′, σ)) ≈ 20.0
-            @test mean(recompute_stress(m, σ)) > 20.0
-            @test abs(@matcalc(:yield_function, m′; σ = recompute_stress(m′, σ))) < sqrt(eps(Float64))
+            @test mean(check_tensioncutoff(m′, σ)) ≈ 20.0
+            @test mean(check_tensioncutoff(m, σ)) > 20.0
+            @test abs(@matcalc(:yield_function, m′; σ = check_tensioncutoff(m′, σ))) < sqrt(eps(Float64))
         end
     end
 end

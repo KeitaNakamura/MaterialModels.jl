@@ -25,7 +25,7 @@ macro matcalc_def(def)
     dict = splitdef(def)
     kwargs = sort(dict[:kwargs]; by = x -> splitarg(x)[1]) # sort by arg name
 
-    dict[:name] = Symbol(:matcalc_, dict[:name], :__, join_kwargs(map(x -> splitarg(x)[1], kwargs), :__))
+    dict[:name] = Symbol(:matcalc__, dict[:name], :__, join_kwargs(map(x -> splitarg(x)[1], kwargs), :__))
     append!(dict[:args], kwargs)
     empty!(dict[:kwargs])
 
@@ -40,7 +40,7 @@ macro matcalc(parameters::Expr, val::QuoteNode, model)
     @assert Meta.isexpr(parameters, :parameters)
     kwargs = sort(parameters.args; by = x -> splitarg(x)[1]) # sort by arg name
 
-    f = Symbol(:matcalc_, val.value, :__, join_kwargs(map(x -> splitarg(x)[1], kwargs), :__))
+    f = Symbol(:matcalc__, val.value, :__, join_kwargs(map(x -> splitarg(x)[1], kwargs), :__))
     args = map(kwargs) do kw
         arg_name, arg_type, slurp, default = splitarg(kw)
         default === nothing ? arg_name : default
@@ -52,7 +52,7 @@ macro matcalc(parameters::Expr, val::QuoteNode, model)
 end
 
 macro matcalc(val::QuoteNode, model)
-    f = Symbol(:matcalc_, val.value, :__)
+    f = Symbol(:matcalc__, val.value, :__)
     quote
         MaterialModels.$f($model)
     end |> esc
@@ -81,13 +81,13 @@ function _search_matcalc(prefix::Symbol, ::Type{Model}) where {Model <: Material
 end
 
 function search_matcalc(valname::Symbol, ::Type{Model} = MaterialModel) where {Model <: MaterialModel}
-    _search_matcalc(Symbol(:matcalc_, valname, :__), Model)
+    _search_matcalc(Symbol(:matcalc__, valname, :__), Model)
 end
 function search_matcalc(::Type{Model} = MaterialModel) where {Model <: MaterialModel}
-    _search_matcalc(:matcalc_, Model)
+    _search_matcalc(:matcalc__, Model)
 end
 function search_matcalc(model::MaterialModel)
-    _search_matcalc(:matcalc_, typeof(model))
+    _search_matcalc(:matcalc__, typeof(model))
 end
 
 include("LinearElastic.jl")
