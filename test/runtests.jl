@@ -12,15 +12,15 @@ using MaterialModels
     end
     @testset "search_matcalc" begin
         meths = @inferred(MaterialModels.search_matcalc())::Vector{Method}
-        @test all(str -> startswith(str, "matcalc_"), map(string, meths))
+        @test all(str -> startswith(str, "matcalc__"), map(string, meths))
         meths = @inferred(MaterialModels.search_matcalc(:stress))::Vector{Method}
-        @test all(str -> startswith(str, "matcalc_stress__"), map(string, meths))
+        @test all(str -> startswith(str, "matcalc__stress__"), map(string, meths))
         # specify model
         meths = @inferred(MaterialModels.search_matcalc(LinearElastic))::Vector{Method}
-        @test all(str -> startswith(str, "matcalc_"), map(string, meths))
+        @test all(str -> startswith(str, "matcalc__"), map(string, meths))
         @test all(m -> m.sig.parameters[2] <: LinearElastic, meths)
         meths = @inferred(MaterialModels.search_matcalc(:stress, LinearElastic))::Vector{Method}
-        @test all(str -> startswith(str, "matcalc_stress__"), map(string, meths))
+        @test all(str -> startswith(str, "matcalc__stress__"), map(string, meths))
         @test all(m -> m.sig.parameters[2] <: LinearElastic, meths)
     end
 end
