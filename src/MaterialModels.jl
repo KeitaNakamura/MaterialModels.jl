@@ -4,10 +4,20 @@ using Reexport
 using MacroTools
 @reexport using Tensorial
 
+using Base: @kwdef
+
 export
     MaterialModel,
+# ElasticModel
+    ElasticModel,
     LinearElastic,
+# ElastoPlasticModel
+    ElastoPlasticModel,
     DruckerPrager,
+# WaterEOS
+    WaterEOS,
+    MonaghanWaterEOS,
+    MorrisWaterEOS,
     @matcalc
 
 
@@ -90,7 +100,13 @@ function search_matcalc(model::MaterialModel)
     _search_matcalc(:matcalc__, typeof(model))
 end
 
+# elastic models
 include("LinearElastic.jl")
+
+# elasto-plastic models
 include("DruckerPrager.jl")
+
+# fluids
+include("WaterEOS.jl")
 
 end # module
