@@ -1,0 +1,15 @@
+name = "MaterialModels"
+uuid = "a94b3f18-6cb1-4ab4-af29-8dac6ebab634"
+authors = ["Keita Nakamura <keita.nakamura.1109@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+Tensorial = "98f94333-fa9f-48a9-ad80-1c66397b2b38"
+
+[compat]
+MacroTools = "0.5"
+Reexport = "1"
+Tensorial = "0.11, 0.12"
+julia = "1.6"
