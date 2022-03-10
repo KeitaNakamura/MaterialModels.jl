@@ -7,6 +7,7 @@ using MacroTools
 using Base: @kwdef
 
 export
+    @matcalc,
     MaterialModel,
 # ElasticModel
     ElasticModel,
@@ -17,8 +18,7 @@ export
 # WaterEOS
     WaterEOS,
     MonaghanWaterEOS,
-    MorrisWaterEOS,
-    @matcalc
+    MorrisWaterEOS
 
 
 abstract type MaterialModel end
