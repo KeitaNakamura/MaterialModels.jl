@@ -38,29 +38,28 @@ function VonMises(elastic::Elastic, mc_type; c::Real) where {Elastic}
     VonMises{Elastic}(elastic, q_y, c)
 end
 
-"""
-    @matcalc(:stress_status, model::VonMises{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
-
-Compute the stress and also return status `(; plastic::Bool)`.
-"""
-@matcalc_def function stress_status(model::VonMises{LinearElastic}; D_e::SymmetricFourthOrderTensor{3}, σ_trial::SymmetricSecondOrderTensor{3})
+@matcalc_def function stress_all(model::VonMises{LinearElastic}; D_e::SymmetricFourthOrderTensor{3}, σ_trial::SymmetricSecondOrderTensor{3})
     dfdσ, f_trial = gradient(σ_trial -> @matcalc(:yield_function, model; σ = σ_trial), σ_trial, :all)
-    f_trial ≤ 0.0 && return (σ_trial, (plastic = false,))
+    if f_trial ≤ 0.0
+        σ = σ_trial
+        return (; σ, status = (plastic = false,))
+    end
     dgdσ = @matcalc(:plastic_flow, model; σ = σ_trial)
-    Δγ = f_trial / (dgdσ ⊡ D_e ⊡ dfdσ)
-    σ = σ_trial - Δγ * (D_e ⊡ dgdσ)
-    (σ, (plastic = true,))
+    dλ = f_trial / (dgdσ ⊡ D_e ⊡ dfdσ)
+    dϵ_p = dλ * dgdσ
+    σ = σ_trial - D_e ⊡ dϵ_p
+    (; σ, status = (plastic = true,))
 end
 
 """
-    @matcalc(:stress_status, model::VonMises{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
+    @matcalc(:stress_all, model::VonMises{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
 
-Compute the stress and also return status `(; plastic::Bool)`.
+Compute the stress and related variables as `NamedTuple`.
 """
-@matcalc_def function stress_status(model::VonMises{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
+@matcalc_def function stress_all(model::VonMises{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
     D_e = @matcalc(:stiffness, model.elastic)
     σ_trial = @matcalc(:stress, model.elastic; σ, dϵ)
-    @matcalc(:stress_status, model; D_e, σ_trial)
+    @matcalc(:stress_all, model; D_e, σ_trial)
 end
 
 """
@@ -69,7 +68,7 @@ end
 Compute the stress.
 """
 @matcalc_def function stress(model::VonMises; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
-    first(@matcalc(:stress_status, model; σ, dϵ))
+    @matcalc(:stress_all, model; σ, dϵ).σ
 end
 
 """
