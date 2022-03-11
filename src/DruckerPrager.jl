@@ -97,7 +97,7 @@ end
 """
     @matcalc(:stress_status, model::DruckerPrager{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
 
-Compute stress and also return status `(; plastic::Bool, tensioncutoff::Bool)`.
+Compute the stress and also return status `(; plastic::Bool, tensioncutoff::Bool)`.
 """
 @matcalc_def function stress_status(model::DruckerPrager{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
     D_e = @matcalc(:stiffness, model.elastic)
@@ -108,7 +108,7 @@ end
 """
     @matcalc(:stress, model::DruckerPrager{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
 
-Compute stress.
+Compute the stress.
 """
 @matcalc_def function stress(model::DruckerPrager{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
     first(@matcalc(:stress_status, model; σ, dϵ))
@@ -117,7 +117,7 @@ end
 """
     @matcalc(:yield_function, model::DruckerPrager; σ::SymmetricSecondOrderTensor{3})
 
-Compute yield function.
+Compute the yield function.
 """
 @matcalc_def function yield_function(model::DruckerPrager; σ::SymmetricSecondOrderTensor{3})
     A = model.A
@@ -131,7 +131,7 @@ end
 """
     @matcalc(:plastic_flow, model::DruckerPrager; σ::SymmetricSecondOrderTensor{3})
 
-Compute plastic flow (the gradient of plastic potential function in stress space, i.e., ``\\partial{g}/\\partial{\\sigma}``).
+Compute the plastic flow (the gradient of plastic potential function in stress space, i.e., ``\\partial{g}/\\partial{\\sigma}``).
 """
 @matcalc_def function plastic_flow(model::DruckerPrager; σ::SymmetricSecondOrderTensor{3})
     b = model.b
