@@ -12,6 +12,7 @@ makedocs(;
             "VonMises.md",
             "DruckerPrager.md",
             "WaterEOS.md",
+            "FluidModel.md",
         ],
     ],
     doctest = true, # :fix
