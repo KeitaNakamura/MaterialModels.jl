@@ -1,7 +1,7 @@
 name = "MaterialModels"
 uuid = "a94b3f18-6cb1-4ab4-af29-8dac6ebab634"
 authors = ["Keita Nakamura <keita.nakamura.1109@gmail.com>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
