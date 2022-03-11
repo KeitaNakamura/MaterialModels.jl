@@ -29,6 +29,7 @@ end
 include("LinearElastic.jl")
 
 # elasto-plastic models
+include("VonMises.jl")
 include("DruckerPrager.jl")
 
 # fluids

@@ -14,6 +14,7 @@ export
     LinearElastic,
 # ElastoPlasticModel
     ElastoPlasticModel,
+    VonMises,
     DruckerPrager,
 # WaterEOS
     WaterEOS,
@@ -130,6 +131,7 @@ end
 include("LinearElastic.jl")
 
 # elasto-plastic models
+include("VonMises.jl")
 include("DruckerPrager.jl")
 
 # fluids

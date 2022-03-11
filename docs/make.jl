@@ -9,6 +9,7 @@ makedocs(;
         "Home" => "index.md",
         "Material models" => [
             "LinearElastic.md",
+            "VonMises.md",
             "DruckerPrager.md",
             "WaterEOS.md",
         ],
