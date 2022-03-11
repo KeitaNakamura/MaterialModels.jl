@@ -19,7 +19,9 @@ export
 # WaterEOS
     WaterEOS,
     MonaghanWaterEOS,
-    MorrisWaterEOS
+    MorrisWaterEOS,
+    FluidModel,
+    NewtonianFluid
 
 
 abstract type MaterialModel end
@@ -136,5 +138,6 @@ include("DruckerPrager.jl")
 
 # fluids
 include("WaterEOS.jl")
+include("FluidModel.jl")
 
 end # module

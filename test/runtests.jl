@@ -34,3 +34,4 @@ include("DruckerPrager.jl")
 
 # fluids
 include("WaterEOS.jl")
+include("FluidModel.jl")
