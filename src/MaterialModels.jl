@@ -12,6 +12,7 @@ export
 # ElasticModel
     ElasticModel,
     LinearElastic,
+    SoilHypoelastic,
 # ElastoPlasticModel
     ElastoPlasticModel,
     VonMises,
@@ -133,6 +134,7 @@ end
 
 # elastic models
 include("LinearElastic.jl")
+include("SoilHypoelastic.jl")
 
 # elasto-plastic models
 include("VonMises.jl")
