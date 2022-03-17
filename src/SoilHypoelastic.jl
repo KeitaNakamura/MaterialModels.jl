@@ -17,6 +17,7 @@ end
 where
 ```math
 K = \\frac{1+e_0}{\\kappa} p, \\quad G = \\frac{3(1-\\nu)}{2(1+\\nu)}
+```
 
 # Parameters
 * `κ`: elastic compressibility index
