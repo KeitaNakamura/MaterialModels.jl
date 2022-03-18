@@ -51,15 +51,19 @@ end
 ##################
 
 typename(x) = Base.typename(x).name
-function _search_matcalc_methods(prefix::Symbol, ::Type{Model}) where {Model <: MaterialModel}
+function _search_matcalc_methods(prefix::Symbol, ::Type{Model}) where {Model <: Union{MaterialModel, Nothing}}
     mod = @__MODULE__
     meths = Method[]
     for name in names(mod, all = true)
         f = getfield(mod, name)
         if isa(f, Base.Callable) && startswith(string(name), string(prefix))
             for m in methods(f, mod)
-                t = m.sig.parameters[2]
-                if t <: Model || typename(t) == typename(Model)
+                if Model <: MaterialModel
+                    t = m.sig.parameters[2]
+                    if t <: Model || typename(t) == typename(Model)
+                        push!(meths, m)
+                    end
+                else
                     push!(meths, m)
                 end
             end
@@ -68,14 +72,11 @@ function _search_matcalc_methods(prefix::Symbol, ::Type{Model}) where {Model <: 
     unique(meths)
 end
 
-function search_matcalc_methods(valname::Symbol, ::Type{Model} = MaterialModel) where {Model <: MaterialModel}
+function search_matcalc_methods(valname::Symbol, Model::Type = Nothing)
     _search_matcalc_methods(Symbol(:matcalc__, valname, :__), Model)
 end
-function search_matcalc_methods(::Type{Model} = MaterialModel) where {Model <: MaterialModel}
+function search_matcalc_methods(Model::Type = Nothing)
     _search_matcalc_methods(:matcalc__, Model)
-end
-function search_matcalc_methods(model::MaterialModel)
-    _search_matcalc_methods(:matcalc__, typeof(model))
 end
 
 struct MatCalc
