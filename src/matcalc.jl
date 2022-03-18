@@ -21,7 +21,7 @@ end
 # @matcalc #
 ############
 
-macro matcalc(parameters::Expr, val::QuoteNode, model)
+macro matcalc(parameters::Expr, val::QuoteNode, model = nothing)
     @assert Meta.isexpr(parameters, :parameters)
     kwargs = sort(parameters.args; by = x -> splitarg(x)[1]) # sort by arg name
 
@@ -31,9 +31,12 @@ macro matcalc(parameters::Expr, val::QuoteNode, model)
         default === nothing ? arg_name : default
     end
 
-    quote
-        MaterialModels.$f($model, $(args...))
-    end |> esc
+    if isnothing(model)
+        code = :(MaterialModels.$f($(args...)))
+    else
+        code = :(MaterialModels.$f($model, $(args...)))
+    end
+    esc(code)
 end
 
 macro matcalc(val::QuoteNode, model)
