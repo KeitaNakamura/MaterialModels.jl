@@ -43,4 +43,6 @@ include("DruckerPrager.jl")
 include("WaterEOS.jl")
 include("FluidModel.jl")
 
+include("utils.jl")
+
 end # module
