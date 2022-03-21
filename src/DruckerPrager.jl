@@ -14,12 +14,12 @@ end
 
 # Yield function
 ```math
-f = \\sqrt{J_2} - (A - B I_1)
+f = \\| \\bm{s} \\| - (A - Bp)
 ```
 
 # Plastic flow
 ```math
-g = \\sqrt{J_2} + b I_1
+g = \\| \\bm{s} \\| + b p
 ```
 """
 function DruckerPrager(elastic::Elastic; A::Real, B::Real, b::Real) where {Elastic <: ElasticModel}
@@ -30,7 +30,7 @@ end
     DruckerPrager(::ElasticModel, mohr_coulomb_type; c, ϕ, ψ = ϕ, tensioncutoff = 0)
 
 # Parameters
-* `mohr_coulomb_type`: choose from `:circumscribed`, `:inscribed` and `:planestrain`
+* `mohr_coulomb_type`: choose from `:circumscribed`, `:middle_circumscribed`, `:inscribed` and `:planestrain`
 * `c`: cohesion
 * `ϕ`: internal friction angle
 * `ψ`: dilatancy angle
@@ -39,19 +39,23 @@ end
 function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real = ϕ, tensioncutoff::Union{Real, Bool} = 0) where {Elastic <: ElasticModel}
     mc_type = Symbol(mc_type)
     if mc_type == :circumscribed
-        A = 6c*cos(ϕ) / (√3 * (3 - sin(ϕ)))
-        B = 2sin(ϕ) / (√3 * (3 - sin(ϕ)))
-        b = 2sin(ψ) / (√3 * (3 - sin(ψ)))
+        A = 2*√6*c*cos(ϕ) / (3 - sin(ϕ))
+        B = 2*√6*sin(ϕ) / (3 - sin(ϕ))
+        b = 2*√6*sin(ψ) / (3 - sin(ψ))
+    elseif mc_type == :middle_circumscribed
+        A = 2*√6*c*cos(ϕ) / (3 + sin(ϕ))
+        B = 2*√6*sin(ϕ) / (3 + sin(ϕ))
+        b = 2*√6*sin(ψ) / (3 + sin(ψ))
     elseif mc_type == :inscribed
-        A = 6c*cos(ϕ) / (√3 * (3 + sin(ϕ)))
-        B = 2sin(ϕ) / (√3 * (3 + sin(ϕ)))
-        b = 2sin(ψ) / (√3 * (3 + sin(ψ)))
+        A = 3*√2*c*cos(ϕ) / sqrt(9 + 3sin(ϕ)^2)
+        B = 3*√2*sin(ϕ) / sqrt(9 + 3sin(ϕ)^2)
+        b = 3*√2*sin(ψ) / sqrt(9 + 3sin(ψ)^2)
     elseif mc_type == :planestrain
-        A = 3c / sqrt(9 + 12tan(ϕ)^2)
-        B = tan(ϕ) / sqrt(9 + 12tan(ϕ)^2)
-        b = tan(ψ) / sqrt(9 + 12tan(ψ)^2)
+        A = 3*√2*c / sqrt(9 + 12tan(ϕ)^2)
+        B = 3*√2*tan(ϕ) / sqrt(9 + 12tan(ϕ)^2)
+        b = 3*√2*tan(ψ) / sqrt(9 + 12tan(ψ)^2)
     else
-        throw(ArgumentError("Choose Mohr-Coulomb type from :circumscribed, :inscribed and :planestrain, got $mc_type"))
+        throw(ArgumentError("Choose Mohr-Coulomb type from :circumscribed, :middle_circumscribed, :inscribed and :planestrain, got $mc_type"))
     end
     tensioncutoff === true && throw(ArgumentError("Set value of mean stress limit to enable `tensioncutoff`"))
     if tensioncutoff === false
@@ -86,12 +90,10 @@ end
         s = dev(σ_trial) # NOT `σ`
         σ = p_t*I + s # slide stress along p axis (process (1))
         if @matcalc(:yieldfunction, model; σ) > 0 # zone2 -> find corner
-            A = model.A
-            B = model.B
-            I₁ = tr(σ)
-            J₂ = (A - B*I₁)^2
-            a = sqrt(2J₂ / (s ⊡ s))
-            σ = p_t*I + a*s
+            A, B = model.A, model.B
+            p = mean(σ)
+            a = A - B*p
+            σ = p_t*I + a*normalize(s)
         end
         return (; σ, status = (plastic = true, tensioncutoff = true))
     end
@@ -124,12 +126,10 @@ end
 Compute the yield function.
 """
 @matcalc_def function yieldfunction(model::DruckerPrager; σ::SymmetricSecondOrderTensor{3})
-    A = model.A
-    B = model.B
-    I₁ = tr(σ)
+    A, B = model.A, model.B
+    p = mean(σ)
     s = dev(σ)
-    J₂ = tr(s ⋅ s) / 2
-    √J₂ - (A - B*I₁)
+    norm(s) - (A - B*p)
 end
 
 """
@@ -140,11 +140,11 @@ Compute the plastic flow (the gradient of plastic potential function in stress s
 @matcalc_def function plasticflow(model::DruckerPrager; σ::SymmetricSecondOrderTensor{3})
     b = model.b
     s = dev(σ)
-    J₂ = tr(s ⋅ s) / 2
-    if J₂ < eps(typeof(J₂))
-        dgdσ = b * one(σ)
+    s_norm = norm(s)
+    if s_norm < sqrt(eps(eltype(σ)))
+        dgdσ = b/3 * one(σ)
     else
-        dgdσ = s / (2*√J₂) + b * one(σ)
+        dgdσ = s/s_norm + b/3 * one(σ)
     end
     dgdσ
 end
