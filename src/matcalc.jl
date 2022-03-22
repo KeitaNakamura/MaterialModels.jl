@@ -3,14 +3,12 @@
 ################
 
 join_symbols(kwargs, delim) = Symbol(join(kwargs, delim))
-remove_dots(x::Symbol) = x
-remove_dots(x::Expr) = Meta.isexpr(x, :.) ? x.args[2].value : x
 
 macro matcalc_def(def)
     dict = splitdef(def)
     kwargs = sort(dict[:kwargs]; by = x -> splitarg(x)[1]) # sort by arg name
 
-    dict[:name] = Symbol(:matcalc__, dict[:name], :__, join_symbols(map(x -> remove_dots(splitarg(x)[1]), kwargs), :__))
+    dict[:name] = Symbol(:matcalc__, dict[:name], :__, join_symbols(map(x -> splitarg(x)[1], kwargs), :__))
     append!(dict[:args], kwargs)
     empty!(dict[:kwargs])
 
@@ -21,9 +19,12 @@ end
 # @matcalc #
 ############
 
+remove_dots(x::Symbol) = x
+remove_dots(x::Expr) = Meta.isexpr(x, :.) ? x.args[2].value : x
+
 macro matcalc(parameters::Expr, val::QuoteNode, model = nothing)
     @assert Meta.isexpr(parameters, :parameters)
-    kwargs = sort(parameters.args; by = x -> splitarg(x)[1]) # sort by arg name
+    kwargs = sort(parameters.args; by = x -> remove_dots(splitarg(x)[1])) # sort by arg name
 
     f = Symbol(:matcalc__, val.value, :__, join_symbols(map(x -> remove_dots(splitarg(x)[1]), kwargs), :__))
     args = map(kwargs) do kw
