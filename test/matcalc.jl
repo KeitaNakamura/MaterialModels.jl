@@ -4,7 +4,10 @@
         m = LinearElastic(; E = rand(), K = rand())
         σ = rand(SymmetricSecondOrderTensor{3})
         dϵ = rand(SymmetricSecondOrderTensor{3})
+        ρ = rand()
+        K, G = m.K, m.G
         @test @matcalc(:stress, m; σ, dϵ) ≈ @matcalc(:stress, m; dϵ, σ)
+        @test @matcalc(:soundspeed; K, G, ρ) ≈ @matcalc(:soundspeed; m.G, m.K, ρ)
     end
     @testset "search_matcalc_methods" begin
         meths = @inferred(MaterialModels.search_matcalc_methods())::Vector{Method}

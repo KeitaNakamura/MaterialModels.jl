@@ -23,7 +23,7 @@ end
 
 macro matcalc(parameters::Expr, val::QuoteNode, model = nothing)
     @assert Meta.isexpr(parameters, :parameters)
-    kwargs = sort(parameters.args; by = x -> splitarg(x)[1]) # sort by arg name
+    kwargs = sort(parameters.args; by = x -> remove_dots(splitarg(x)[1])) # sort by arg name
 
     f = Symbol(:matcalc__, val.value, :__, join_symbols(map(x -> remove_dots(splitarg(x)[1]), kwargs), :__))
     args = map(kwargs) do kw
