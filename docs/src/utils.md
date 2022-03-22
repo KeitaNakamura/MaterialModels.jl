@@ -3,5 +3,5 @@
 ```@autodocs
 Modules = [MaterialModels]
 Order = [:function]
-Pages = ["utils.jl"]
+Pages = ["misc.jl"]
 ```
