@@ -1,4 +1,12 @@
 @testset "Objective stress rate" begin
+    @testset "Jaumann rate" begin
+        σ = rand(SymmetricSecondOrderTensor{3})
+        σ̇ᴶ = rand(SymmetricSecondOrderTensor{3})
+        W = skew(rand(SecondOrderTensor{3}))
+        jaumann2caucy(dσ_jaumann, σ, W) = @matcalc(:jaumann2caucy; dσ_jaumann, σ, W)
+        σ̇ = @inferred(jaumann2caucy(σ̇ᴶ, σ, W))::SymmetricSecondOrderTensor{3}
+        @test σ̇ᴶ ≈ σ̇ - W⋅σ + σ⋅W
+    end
 end
 
 @testset "Misc" begin
