@@ -27,7 +27,7 @@ function DruckerPrager(elastic::Elastic; A::Real, B::Real, b::Real) where {Elast
 end
 
 """
-    DruckerPrager(::ElasticModel, mohr_coulomb_type; c, ϕ, ψ = ϕ, tensioncutoff = 0)
+    DruckerPrager(::ElasticModel, mohr_coulomb_type; c, ϕ, ψ = ϕ, tensioncutoff = false)
 
 # Parameters
 * `mohr_coulomb_type`: choose from `:circumscribed`, `:middle_circumscribed`, `:inscribed` and `:planestrain`
@@ -36,7 +36,7 @@ end
 * `ψ`: dilatancy angle
 * `tensioncutoff`: set limit of mean stress or `false`
 """
-function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real = ϕ, tensioncutoff::Union{Real, Bool} = 0) where {Elastic <: ElasticModel}
+function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real = ϕ, tensioncutoff::Union{Real, Bool} = false) where {Elastic <: ElasticModel}
     mc_type = Symbol(mc_type)
     if mc_type == :circumscribed
         A = 2*√6*c*cos(ϕ) / (3 - sin(ϕ))
