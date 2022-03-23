@@ -34,9 +34,9 @@ end
 * `c`: cohesion
 * `ϕ`: internal friction angle (radian)
 * `ψ`: dilatancy angle (radian)
-* `tensioncutoff`: set limit of mean stress or `false`
+* `tensioncutoff`: set limit of mean stress, `false` or `:auto` (use the mean stress at ``\\| \\bm{s} \\| = 0``).
 """
-function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real=ϕ, tensioncutoff::Union{Real,Bool}=false, checkparameters=true) where {Elastic <: ElasticModel}
+function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real=ϕ, tensioncutoff=:auto, checkparameters::Bool=true) where {Elastic <: ElasticModel}
     if checkparameters
         if !(0 ≤ ϕ ≤ 2π)
             @warn "Perhaps you are using degree for internal friction angle `ϕ`, you should use radian instead. This message can be disabled by setting `checkparameters=false` in `DruckerPrager` constructor."
@@ -65,9 +65,16 @@ function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real=ϕ
     else
         throw(ArgumentError("Choose Mohr-Coulomb type from :circumscribed, :middle_circumscribed, :inscribed and :planestrain, got $mc_type"))
     end
-    tensioncutoff === true && throw(ArgumentError("Set value of mean stress limit to enable `tensioncutoff`"))
-    if tensioncutoff === false
+    if tensioncutoff === true
+        throw(ArgumentError("Set value of mean stress limit to enable `tensioncutoff`"))
+    elseif tensioncutoff === false
         tensioncutoff = Inf
+    elseif tensioncutoff == :auto
+        tensioncutoff = A / B
+    elseif tensioncutoff isa Real
+        # ok
+    else
+        throw(ArgumentError("Invalid value for `tensioncutoff`, got $tensioncutoff"))
     end
     DruckerPrager{Elastic}(elastic, A, B, b, c, ϕ, ψ, tensioncutoff)
 end

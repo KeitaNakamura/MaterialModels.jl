@@ -6,6 +6,10 @@
             stressall(m, σ, dϵ) = @matcalc(:stressall, m; σ, dϵ)
             yieldfunction(m, σ) = @matcalc(:yieldfunction, m; σ)
 
+            ## tension-cutoff = :auto
+            m = @inferred DruckerPrager(elastic, mc_type, c = 20.0, ϕ = deg2rad(30), ψ = deg2rad(10))
+            @test yieldfunction(m, m.tensioncutoff * one(SymmetricSecondOrderTensor{3})) ≈ 0
+
             ## without tension-cutoff
             m = @inferred DruckerPrager(elastic, mc_type, c = 20.0, ϕ = deg2rad(30), ψ = deg2rad(10), tensioncutoff = false)
             for i in 1:50 # check stress integration by random strain 50 times
