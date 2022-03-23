@@ -32,11 +32,19 @@ end
 # Parameters
 * `mohr_coulomb_type`: choose from `:circumscribed`, `:middle_circumscribed`, `:inscribed` and `:planestrain`
 * `c`: cohesion
-* `ϕ`: internal friction angle
-* `ψ`: dilatancy angle
+* `ϕ`: internal friction angle (radian)
+* `ψ`: dilatancy angle (radian)
 * `tensioncutoff`: set limit of mean stress or `false`
 """
-function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real = ϕ, tensioncutoff::Union{Real, Bool} = false) where {Elastic <: ElasticModel}
+function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real=ϕ, tensioncutoff::Union{Real,Bool}=false, checkparameters=true) where {Elastic <: ElasticModel}
+    if checkparameters
+        if !(0 ≤ ϕ ≤ 2π)
+            @warn "Perhaps you are using degree for internal friction angle `ϕ`, you should use radian instead. This message can be disabled by setting `checkparameters=false` in `DruckerPrager` constructor."
+        end
+        if !(0 ≤ ψ ≤ 2π)
+            @warn "Perhaps you are using degree for internal friction angle `ψ`, you should use radian instead. This message can be disabled by setting `checkparameters=false` in `DruckerPrager` constructor."
+        end
+    end
     mc_type = Symbol(mc_type)
     if mc_type == :circumscribed
         A = 2*√6*c*cos(ϕ) / (3 - sin(ϕ))
