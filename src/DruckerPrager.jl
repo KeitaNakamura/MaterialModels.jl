@@ -30,7 +30,7 @@ end
     DruckerPrager(::ElasticModel, mohr_coulomb_type; c, ϕ, ψ = ϕ, tensioncutoff = :auto)
 
 # Parameters
-* `mohr_coulomb_type`: choose from `:compression`, `:tension`, `:inscribed` and `:planestrain`
+* `mohr_coulomb_type`: choose from `:compression`, `:tension`, `:average`, `:inscribed` and `:planestrain`
 * `c`: cohesion
 * `ϕ`: internal friction angle (radian)
 * `ψ`: dilatancy angle (radian)
@@ -54,6 +54,12 @@ function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real=ϕ
         A = 2*√6*c*cos(ϕ) / (3 + sin(ϕ))
         B = 2*√6*sin(ϕ) / (3 + sin(ϕ))
         b = 2*√6*sin(ψ) / (3 + sin(ψ))
+    elseif mc_type == :average
+        m_c = DruckerPrager(elastic, :compression; c, ϕ, ψ, tensioncutoff, checkparameters)
+        m_t = DruckerPrager(elastic, :tension;     c, ϕ, ψ, tensioncutoff, checkparameters)
+        A = (m_c.A + m_t.A) / 2
+        B = (m_c.B + m_t.B) / 2
+        b = (m_c.b + m_t.b) / 2
     elseif mc_type == :inscribed
         A = 3*√2*c*cos(ϕ) / sqrt(9 + 3sin(ϕ)^2)
         B = 3*√2*sin(ϕ) / sqrt(9 + 3sin(ϕ)^2)
@@ -63,7 +69,7 @@ function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real=ϕ
         B = 3*√2*tan(ϕ) / sqrt(9 + 12tan(ϕ)^2)
         b = 3*√2*tan(ψ) / sqrt(9 + 12tan(ψ)^2)
     else
-        throw(ArgumentError("Choose Mohr-Coulomb type from :compression, :tension, :inscribed and :planestrain, got $mc_type"))
+        throw(ArgumentError("Choose Mohr-Coulomb type from `:compression`, `:tension`, `:average`, `:inscribed` and `:planestrain`, got $mc_type"))
     end
     if tensioncutoff === true
         throw(ArgumentError("Set value of mean stress limit to enable `tensioncutoff`"))

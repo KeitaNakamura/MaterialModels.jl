@@ -1,6 +1,6 @@
 @testset "DruckerPrager" begin
     for elastic in (LinearElastic(E = 1e6, ν = 0.3),)
-        for mc_type in (:compression, :tension, :inscribed, :planestrain)
+        for mc_type in (:compression, :tension, :average, :inscribed, :planestrain)
             Random.seed!(1234)
             stress(m, σ, dϵ) = @matcalc(:stress, m; σ, dϵ)
             stressall(m, σ, dϵ) = @matcalc(:stressall, m; σ, dϵ)
