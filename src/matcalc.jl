@@ -40,10 +40,12 @@ macro matcalc(parameters::Expr, val::QuoteNode, model = nothing)
     esc(code)
 end
 
-macro matcalc(val::QuoteNode, model)
-    f = Symbol(:matcalc__, val.value, :__)
+macro matcalc(val::QuoteNode, xs...)
+    inds = findall(x -> Meta.isexpr(x, :(=)), xs)
+    args = xs[setdiff(1:length(xs), inds)]
+    kwargs = xs[inds]
     quote
-        MaterialModels.$f($model)
+        @matcalc($val, $(args...); $(kwargs...))
     end |> esc
 end
 
