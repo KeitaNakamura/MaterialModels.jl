@@ -95,6 +95,9 @@ end
     dϵ_p = dλ * dgdσ
     σ = σ_trial - D_e ⊡ dϵ_p
     if mean(σ) > p_t # should be tension-cutoff
+        # very rough tensioncut-off
+        # more proper way is to use multi-surface return mapping algorithm?
+        #
         # \<- yield surface
         #  \
         #   \          (1)
