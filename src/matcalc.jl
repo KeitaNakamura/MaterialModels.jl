@@ -40,10 +40,11 @@ macro matcalc(parameters::Expr, val::QuoteNode, model = nothing)
     esc(code)
 end
 
-macro matcalc(val::QuoteNode, model)
+macro matcalc(val::QuoteNode, args...)
+    any(x -> Meta.isexpr(x, :(=)), args) && return :(throw(ArgumentError("@matcalc: use semicolon `;` before keyword arguments")))
     f = Symbol(:matcalc__, val.value, :__)
     quote
-        MaterialModels.$f($model)
+        MaterialModels.$f($(args...))
     end |> esc
 end
 

@@ -10,6 +10,8 @@
         @test @matcalc(:stress, m; σ=σ, dϵ=dϵ) ≈ @matcalc(:stress, m; dϵ, σ=σ)
         @test @matcalc(:soundspeed; K, G, ρ) ≈ @matcalc(:soundspeed; m.G, m.K, ρ)
         @test @matcalc(:soundspeed; K, G=G, ρ) ≈ @matcalc(:soundspeed; G=m.G, m.K, ρ)
+        @test_throws Exception @matcalc(:stress, m, σ=σ, dϵ=dϵ)
+        @test_throws Exception @matcalc(:soundspeed, K=K, G=G, ρ=ρ)
     end
     @testset "search_matcalc_methods" begin
         meths = @inferred(MaterialModels.search_matcalc_methods())::Vector{Method}
