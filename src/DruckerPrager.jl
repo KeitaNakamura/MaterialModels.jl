@@ -27,16 +27,16 @@ function DruckerPrager(elastic::Elastic; A::Real, B::Real, b::Real) where {Elast
 end
 
 """
-    DruckerPrager(::ElasticModel, mohr_coulomb_type; c, ϕ, ψ = ϕ, tensioncutoff = :auto)
+    DruckerPrager(::ElasticModel, mohr_coulomb_type; c, ϕ, ψ = ϕ, tensioncutoff = false)
 
 # Parameters
 * `mohr_coulomb_type`: choose from `:compression`, `:tension`, `:average`, `:inscribed` and `:planestrain`
 * `c`: cohesion
 * `ϕ`: internal friction angle (radian)
 * `ψ`: dilatancy angle (radian)
-* `tensioncutoff`: set limit of mean stress, `false` or `:auto` (use the mean stress at ``\\| \\bm{s} \\| = 0``)
+* `tensioncutoff`: set limit of mean stress or `false`.
 """
-function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real=ϕ, tensioncutoff=:auto, checkparameters::Bool=true) where {Elastic <: ElasticModel}
+function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real=ϕ, tensioncutoff=false, checkparameters::Bool=true) where {Elastic <: ElasticModel}
     if checkparameters
         if !(0 ≤ ϕ ≤ 2π)
             @warn "Perhaps you are using degree for internal friction angle `ϕ`, you should use radian instead. This message can be disabled by setting `checkparameters=false` in `DruckerPrager` constructor."
@@ -74,8 +74,6 @@ function DruckerPrager(elastic::Elastic, mc_type; c::Real, ϕ::Real, ψ::Real=ϕ
     if tensioncutoff === true
         throw(ArgumentError("Set value of mean stress limit to enable `tensioncutoff`"))
     elseif tensioncutoff === false
-        tensioncutoff = Inf
-    elseif tensioncutoff == :auto
         tensioncutoff = A / B
     elseif tensioncutoff isa Real
         # ok
@@ -90,13 +88,16 @@ end
     p_t = model.tensioncutoff
     if f_trial ≤ 0.0 && mean(σ_trial) ≤ p_t
         σ = σ_trial
-        return (; σ, status = (plastic = false, tensioncutoff = false))
+        return (; σ, status = (plastic = false, tensioncollapsed = false))
     end
     dgdσ = @matcalc(:plasticflow, model; σ = σ_trial)
     dλ = f_trial / (dgdσ ⊡ D_e ⊡ dfdσ)
     dϵ_p = dλ * dgdσ
     σ = σ_trial - D_e ⊡ dϵ_p
     if mean(σ) > p_t # should be tension-cutoff
+        # very rough tensioncut-off
+        # more proper way is to use multi-surface return mapping algorithm?
+        #
         # \<- yield surface
         #  \
         #   \          (1)
@@ -116,9 +117,9 @@ end
             a = A - B*p
             σ = p_t*I + a*normalize(s)
         end
-        return (; σ, status = (plastic = true, tensioncutoff = true))
+        return (; σ, status = (plastic = true, tensioncollapsed = true))
     end
-    (; σ, status = (plastic = true, tensioncutoff = false))
+    (; σ, status = (plastic = true, tensioncollapsed = false))
 end
 
 """
