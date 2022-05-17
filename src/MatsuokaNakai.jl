@@ -6,10 +6,9 @@ struct MatsuokaNakai{Elastic <: ElasticModel} <: ElastoPlasticModel
     c::Float64
     ϕ::Float64
     ψ::Float64
-    tensioncutoff::Float64
 end
 
-function MatsuokaNakai(elastic::Elastic; c::Real, ϕ::Real, ψ::Real = ϕ, tensioncutoff=false, checkparameters::Bool=true) where {Elastic <: ElasticModel}
+function MatsuokaNakai(elastic::Elastic; c::Real, ϕ::Real, ψ::Real = ϕ, checkparameters::Bool=true) where {Elastic <: ElasticModel}
     if checkparameters
         if !(0 ≤ ϕ ≤ 2π)
             @warn "Perhaps you are using degree for internal friction angle `ϕ`, you should use radian instead. This message can be disabled by setting `checkparameters=false` in `MatsuokaNakai` constructor."
@@ -21,85 +20,24 @@ function MatsuokaNakai(elastic::Elastic; c::Real, ϕ::Real, ψ::Real = ϕ, tensi
     α = c * cot(ϕ)
     β = (9 - sin(ϕ)^2) / (1 - sin(ϕ)^2)
     B = (9 - sin(ψ)^2) / (1 - sin(ψ)^2)
-    if tensioncutoff === true
-        throw(ArgumentError("Set value of mean stress limit to enable `tensioncutoff`"))
-    elseif tensioncutoff === false
-        tensioncutoff = c * cot(ϕ)
-    elseif tensioncutoff isa Real
-        # ok
-    else
-        throw(ArgumentError("Invalid value for `tensioncutoff`, got $tensioncutoff"))
-    end
-    MatsuokaNakai{Elastic}(elastic, α, β, B, c, ϕ, ψ, tensioncutoff)
+    MatsuokaNakai{Elastic}(elastic, α, β, B, c, ϕ, ψ)
 end
 
-function compute_stress_on_yieldsurface(model::MatsuokaNakai, p::Real, n::SymmetricSecondOrderTensor{3})
-    α = model.α
-    β = model.β
-
-    p = p - α
-
-    # coefficients of cubic equation for norm of deviatoric stress
-    a = 2β * det(n)
-    b = (3-β) * p * (n ⊡ n)
-    c = 0
-    d = -2(9 - β) * p^3
-
-    # solve cubic equation
-    ξ = (-b^2 + 3a*c) / 3a^2
-    η = (2b^3 - 9a*b*c + 27a^2*d) / 27a^3
-    ζ = sqrt(Complex(27η^2 + 4ξ^3))
-    k = 1 / cbrt(6√3)
-    s = -b/3a - k * (real((3√3η + ζ)^(1/3)) + real((3√3η - ζ)^(1/3)))
-
-    (p + α)*I + s*n
-end
-
-#=
-function plastic_corrector(model, σ_trial::SymmetricSecondOrderTensor{3}, ϵᵉ_trial::SymmetricSecondOrderTensor{3})
-    tol = sqrt(eps(Float64))
-
-    σ = σ_trial
-    ϵᵉ = ϵᵉ_trial
-    Δγ = 0.0
-    for i in 1:20
-        σ = @matcalc(:stress, model.elastic; ϵ = ϵᵉ)
-        Cᵉ = @matcalc(:compliance, model.elastic)
-        dfdσ, f = gradient(σ -> @matcalc(:yieldfunction, model; σ), σ, :all)
-        d²gdσ², dgdσ = gradient(σ -> @matcalc(:plasticflow, model; σ), σ, :all)
-
-        @show f
-        R = ϵᵉ - ϵᵉ_trial + Δγ*dgdσ
-        norm(R) < tol && abs(f) < tol && return σ
-
-        Ξ = inv(Cᵉ + Δγ * d²gdσ²)
-        dfdσ_Ξ = dfdσ ⊡ Ξ
-        dΔγ = (f - dfdσ_Ξ ⊡ R) / (dfdσ_Ξ ⊡ dgdσ)
-        dϵᵉ = Cᵉ ⊡ Ξ ⊡ (-R - dΔγ * dgdσ)
-
-        Δγ += dΔγ
-        ϵᵉ += dϵᵉ
-    end
-    error()
-end
-=#
-
-function plastic_corrector(model, σ_trial::SymmetricSecondOrderTensor{3}, ϵᵉ_trial::SymmetricSecondOrderTensor{3})
+function plastic_corrector(model, ϵᵉ_trial::SymmetricSecondOrderTensor{3})::Tuple{SymmetricSecondOrderTensor{3, Float64}, Bool}
     tol = sqrt(eps(Float64))
 
     F = eigen(ϵᵉ_trial)
     n₁ = F.vectors[:,1]
     n₂ = F.vectors[:,2]
     n₃ = F.vectors[:,3]
-    m₁ = n₁ ⊗ n₁
-    m₂ = n₂ ⊗ n₂
-    m₃ = n₃ ⊗ n₃
+    m₁ = symmetric(n₁ ⊗ n₁, :U)
+    m₂ = symmetric(n₂ ⊗ n₂, :U)
+    m₃ = symmetric(n₃ ⊗ n₃, :U)
 
     ϵᵉ_trial = F.values
-
-    σ = zero(ϵᵉ_trial) # dummy
     ϵᵉ = ϵᵉ_trial
     Δγ = 0.0
+
     for i in 1:20
         σ = @matcalc(:principal_stress, model.elastic; ϵ = ϵᵉ)
         Cᵉ = @matcalc(:principal_compliance, model.elastic)
@@ -107,7 +45,7 @@ function plastic_corrector(model, σ_trial::SymmetricSecondOrderTensor{3}, ϵᵉ
         d²gdσ², dgdσ = gradient(σ -> @matcalc(:plasticflow, model; σ), σ, :all)
 
         R = ϵᵉ - ϵᵉ_trial + Δγ*dgdσ
-        norm(R) < tol && abs(f) < tol && return σ[1]*m₁ + σ[2]*m₂ + σ[3]*m₃
+        norm(R) < tol && abs(f) < tol && return (σ[1]*m₁ + σ[2]*m₂ + σ[3]*m₃, true)
 
         Ξ = inv(Cᵉ + Δγ * d²gdσ²)
         dfdσ_Ξ = dfdσ ⋅ Ξ
@@ -117,14 +55,10 @@ function plastic_corrector(model, σ_trial::SymmetricSecondOrderTensor{3}, ϵᵉ
         Δγ += dΔγ
         ϵᵉ += dϵᵉ
     end
-    error()
-end
 
-#=
-julia> m = MatsuokaNakai(LinearElastic(; E=3e6, ν=0.3333); c = 0.0, ϕ = deg2rad(30.0));
-julia> dϵ = SymmetricSecondOrderTensor{3}([-0.5506046120810548 -0.6407529992669043 -0.8385819181737694; -0.6407529992669043 -0.08127479009709193 -0.0006628843765860148; -0.8385819181737694 -0.0006628843765860148 -0.03503232891782471])
-julia> @matcalc(:stressall, m; σ = zero(SymmetricSecondOrderTensor{3}), dϵ)
-=#
+    # return tip
+    (model.α * one(SymmetricSecondOrderTensor{3}), false)
+end
 
 """
     @matcalc(:stressall, model::MatsuokaNakai{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
@@ -133,38 +67,18 @@ Compute the stress and related variables as `NamedTuple`.
 """
 @matcalc_def function stressall(model::MatsuokaNakai{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
     ϵᵉ = @matcalc(:strain, model.elastic; σ)
+
+    # elastic predictor
     ϵᵉ_trial = ϵᵉ + dϵ
     σ_trial = @matcalc(:stress, model.elastic; ϵ = ϵᵉ_trial)
-
-    f_trial = @matcalc(:yieldfunction, model; σ = σ_trial)
-    p_t = model.tensioncutoff
-    if f_trial ≤ 0.0 && mean(σ_trial) ≤ p_t
+    if @matcalc(:yieldfunction, model; σ = σ_trial) ≤ 0.0
         σ = σ_trial
-        return (; σ, status = (plastic = false, tensioncollapsed = false))
+        return (; σ, status = (plastic = false, converted = true))
     end
 
-    σ = plastic_corrector(model, σ_trial, ϵᵉ_trial)
-
-    if mean(σ) > p_t # should be tension-cutoff
-        # \<- yield surface
-        #  \
-        #   \          (1)
-        #    \   <-------------*
-        #     \                      zone2
-        #      \ corner ____________________
-        #       |
-        # zone1 |      (1)           zone3
-        #       |<-------------*
-        #       |
-        # ---------------> p
-        s = dev(σ_trial) # NOT `σ`
-        σ = p_t*I + s # slide stress along p axis (process (1))
-        if @matcalc(:yieldfunction, model; σ) > 0 # zone2 -> find corner
-            σ = compute_stress_on_yieldsurface(model, p_t, normalize(s))
-        end
-        return (; σ, status = (plastic = true, tensioncollapsed = true))
-    end
-    (; σ, status = (plastic = true, tensioncollapsed = false))
+    # plastic corrector
+    σ, converted = plastic_corrector(model, ϵᵉ_trial)
+    (; σ, status = (plastic = true, converted))
 end
 
 """
