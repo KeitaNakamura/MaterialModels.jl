@@ -11,6 +11,7 @@ include("SoilHypoelastic.jl")
 # elasto-plastic models
 include("VonMises.jl")
 include("DruckerPrager.jl")
+include("MatsuokaNakai.jl")
 
 # fluids
 include("WaterEOS.jl")

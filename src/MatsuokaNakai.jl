@@ -23,29 +23,21 @@ function MatsuokaNakai(elastic::Elastic; c::Real, ϕ::Real, ψ::Real = ϕ, check
     MatsuokaNakai{Elastic}(elastic, α, β, B, c, ϕ, ψ)
 end
 
-function plastic_corrector(model, ϵᵉ_trial::SymmetricSecondOrderTensor{3})::Tuple{SymmetricSecondOrderTensor{3, Float64}, Bool}
+function plastic_corrector(model, ϵᵉ_trial33::SymmetricSecondOrderTensor{3})::Tuple{SymmetricSecondOrderTensor{3, Float64}, Bool}
     tol = sqrt(eps(Float64))
 
-    F = eigen(ϵᵉ_trial)
-    n₁ = F.vectors[:,1]
-    n₂ = F.vectors[:,2]
-    n₃ = F.vectors[:,3]
-    m₁ = symmetric(n₁ ⊗ n₁, :U)
-    m₂ = symmetric(n₂ ⊗ n₂, :U)
-    m₃ = symmetric(n₃ ⊗ n₃, :U)
-
-    ϵᵉ_trial = F.values
+    ϵᵉ_trial, m₁, m₂, m₃ = tospectral(ϵᵉ_trial33)
     ϵᵉ = ϵᵉ_trial
     Δγ = 0.0
 
     for i in 1:20
-        σ = @matcalc(:principal_stress, model.elastic; ϵ = ϵᵉ)
+        σ = @matcalc(:stress, model.elastic; ϵ = ϵᵉ)
         Cᵉ = @matcalc(:principal_compliance, model.elastic)
         dfdσ, f = gradient(σ -> @matcalc(:yieldfunction, model; σ), σ, :all)
         d²gdσ², dgdσ = gradient(σ -> @matcalc(:plasticflow, model; σ), σ, :all)
 
         R = ϵᵉ - ϵᵉ_trial + Δγ*dgdσ
-        norm(R) < tol && abs(f) < tol && return (σ[1]*m₁ + σ[2]*m₂ + σ[3]*m₃, true)
+        norm(R) < tol && abs(f) < tol && return (fromspectral(σ, m₁, m₂, m₃), true)
 
         Ξ = inv(Cᵉ + Δγ * d²gdσ²)
         dfdσ_Ξ = dfdσ ⋅ Ξ
