@@ -23,4 +23,14 @@ end
             @test (@inferred soundspeed1(K, G, ρ))::T ≈ (@inferred soundspeed2(E, ν, ρ))::T
         end
     end
+    @testset "spectral form" begin
+        for T in (Float64, Float32)
+            # speed of sound
+            Random.seed!(1234)
+            σ = rand(SymmetricSecondOrderTensor{3, T})
+            σ′, m₁, m₂, m₃ = (@inferred MaterialModels.tospectral(σ))::Tuple{Vec{3,T}, SymmetricSecondOrderTensor{3,T}, SymmetricSecondOrderTensor{3,T}, SymmetricSecondOrderTensor{3,T}}
+            @test σ ≈ σ′[1]*m₁ + σ′[2]*m₂ + σ′[3]*m₃
+            @test σ ≈ (@inferred MaterialModels.fromspectral(σ′, m₁, m₂, m₃))::SymmetricSecondOrderTensor{3,T}
+        end
+    end
 end

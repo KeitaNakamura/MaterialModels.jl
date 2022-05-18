@@ -6,6 +6,8 @@ struct LinearElastic <: ElasticModel
     ν::Float64
     D::SymmetricFourthOrderTensor{3, Float64, 36}
     Dinv::SymmetricFourthOrderTensor{3, Float64, 36}
+    D33::Mat{3, 3, Float64, 9}
+    D33inv::Mat{3, 3, Float64, 9}
 end
 
 """
@@ -86,10 +88,16 @@ function LinearElastic(; kwargs...)
             λ = 2G*ν / (1-2ν)
         end
     end
+
     δ = one(SymmetricSecondOrderTensor{3})
     I = one(SymmetricFourthOrderTensor{3})
     D = λ * δ ⊗ δ + 2G * I
-    LinearElastic(E, K, G, λ, ν, D, inv(D))
+
+    δ = ones(Vec{3})
+    I = one(Mat{3,3})
+    D33 = λ * δ ⊗ δ + 2G * I
+
+    LinearElastic(E, K, G, λ, ν, D, inv(D), D33, inv(D33))
 end
 
 """
@@ -126,4 +134,61 @@ Return fourth-order stiffness tensor.
 """
 @matcalc_def function stiffness(model::LinearElastic)
     model.D
+end
+
+"""
+    @matcalc(:compliance, model::LinearElastic)
+
+Return fourth-order compliance tensor.
+"""
+@matcalc_def function compliance(model::LinearElastic)
+    model.Dinv
+end
+
+
+# principal versions
+
+"""
+    @matcalc(:stress, model::LinearElastic; σ::Vec{3}, dϵ::Vec{3})
+
+Compute principal stresses.
+"""
+@matcalc_def function stress(model::LinearElastic; σ::Vec{3}, dϵ::Vec{3})
+    σ + model.D33 ⋅ dϵ
+end
+
+"""
+    @matcalc(:stress, model::LinearElastic; ϵ::Vec{3})
+
+Compute principal stresses.
+"""
+@matcalc_def function stress(model::LinearElastic; ϵ::Vec{3})
+    model.D33 ⋅ ϵ
+end
+
+"""
+    @matcalc(:strain, model::LinearElastic; σ::Vec{3})
+
+Compute principal strains.
+"""
+@matcalc_def function strain(model::LinearElastic; σ::Vec{3})
+    model.D33inv ⋅ σ
+end
+
+"""
+    @matcalc(:principal_stiffness, model::LinearElastic)
+
+Return stiffness tensor in principal stress space.
+"""
+@matcalc_def function principal_stiffness(model::LinearElastic)
+    model.D33
+end
+
+"""
+    @matcalc(:principal_compliance, model::LinearElastic)
+
+Return compliance tensor in principal stress space.
+"""
+@matcalc_def function principal_compliance(model::LinearElastic)
+    model.D33inv
 end
