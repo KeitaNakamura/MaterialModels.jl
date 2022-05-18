@@ -91,7 +91,7 @@ end
         return (; σ, status = (plastic = false, tensioncollapsed = false))
     end
     dgdσ = @matcalc(:plasticflow, model; σ = σ_trial)
-    dλ = f_trial / (dgdσ ⊡ D_e ⊡ dfdσ)
+    dλ = f_trial / (dfdσ ⊡ D_e ⊡ dgdσ)
     dϵ_p = dλ * dgdσ
     σ = σ_trial - D_e ⊡ dϵ_p
     if mean(σ) > p_t # should be tension-cutoff

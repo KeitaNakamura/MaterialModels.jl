@@ -17,6 +17,7 @@ export
     ElastoPlasticModel,
     VonMises,
     DruckerPrager,
+    MatsuokaNakai,
 # WaterEOS
     WaterEOS,
     MonaghanWaterEOS,
@@ -38,6 +39,7 @@ include("SoilHypoelastic.jl")
 abstract type ElastoPlasticModel <: MaterialModel end
 include("VonMises.jl")
 include("DruckerPrager.jl")
+include("MatsuokaNakai.jl")
 
 # fluids
 include("WaterEOS.jl")
