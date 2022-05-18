@@ -72,3 +72,9 @@ end
 function fromspectral(σ::Vec{3}, m₁::SymmetricSecondOrderTensor{3}, m₂::SymmetricSecondOrderTensor{3}, m₃::SymmetricSecondOrderTensor{3})
     σ[1]*m₁ + σ[2]*m₂ + σ[3]*m₃
 end
+
+# identity unit tensors
+delta(x::Type{<: Vec{3}}) = ones(x)
+delta(x::Type{<: @Tensor{3,3}}) = one(x)
+delta(x::Type{<: @Tensor{@Symmetry{3,3}}}) = one(x)
+delta(x::AbstractTensor) = delta(typeof(x))

@@ -84,43 +84,27 @@ end
 
 """
     @matcalc(:yieldfunction, model::MatsuokaNakai; σ::SymmetricSecondOrderTensor{3})
+    @matcalc(:yieldfunction, model::MatsuokaNakai; σ::Vec{3})
 
 Compute the yield function.
 """
-@matcalc_def function yieldfunction(model::MatsuokaNakai; σ::SymmetricSecondOrderTensor{3})
+@matcalc_def function yieldfunction(model::MatsuokaNakai; σ::Union{SymmetricSecondOrderTensor{3}, Vec{3}})
     α, β = model.α, model.β
-    I₁, I₂, I₃ = stress_invariants(σ - α*I)
-    -cbrt(I₁*I₂) + cbrt(β*I₃)
-end
-@matcalc_def function yieldfunction(model::MatsuokaNakai; σ::Vec{3})
-    α, β = model.α, model.β
-    σ = σ - α*ones(σ)
-    I₁ = σ[1] + σ[2] + σ[3]
-    I₂ = σ[1]*σ[2] + σ[2]*σ[3] + σ[1]*σ[3]
-    I₃ = σ[1] * σ[2] * σ[3]
+    I₁, I₂, I₃ = stress_invariants(σ - α*delta(σ))
     -cbrt(I₁*I₂) + cbrt(β*I₃)
 end
 
 """
     @matcalc(:plasticflow, model::MatsuokaNakai; σ::SymmetricSecondOrderTensor{3})
+    @matcalc(:plasticflow, model::MatsuokaNakai; σ::Vec{3})
 
 Compute the plastic flow (the gradient of plastic potential function in stress space, i.e., ``\\partial{g}/\\partial{\\sigma}``).
 """
-@matcalc_def function plasticflow(model::MatsuokaNakai; σ::SymmetricSecondOrderTensor{3})
+@matcalc_def function plasticflow(model::MatsuokaNakai; σ::Union{SymmetricSecondOrderTensor{3}, Vec{3}})
     B = model.B
     gradient(σ) do σ
         Base.@_inline_meta
         I₁, I₂, I₃ = stress_invariants(σ)
-        -cbrt(I₁*I₂) + cbrt(B*I₃)
-    end
-end
-@matcalc_def function plasticflow(model::MatsuokaNakai; σ::Vec{3})
-    B = model.B
-    gradient(σ) do σ
-        Base.@_inline_meta
-        I₁ = σ[1] + σ[2] + σ[3]
-        I₂ = σ[1]*σ[2] + σ[2]*σ[3] + σ[1]*σ[3]
-        I₃ = σ[1] * σ[2] * σ[3]
         -cbrt(I₁*I₂) + cbrt(B*I₃)
     end
 end
