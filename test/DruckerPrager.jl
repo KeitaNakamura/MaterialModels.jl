@@ -13,7 +13,7 @@
                 dϵ = @matcalc(:strain, m.elastic; σ)
                 ret = @inferred stressall(m, zero(σ), dϵ)
                 f = @inferred yieldfunction(m, σ)
-                if ret.status.tensioncollapsed
+                if ret.status.tensioncollapse
                     # the stress should be at tip
                     @test abs(@matcalc(:yieldfunction, m; ret.σ)) < sqrt(eps(Float64))
                     @test norm(dev(ret.σ)) < sqrt(eps(Float64))
@@ -32,7 +32,7 @@
                 dϵ = @matcalc(:strain, m.elastic; σ)
                 ret = @inferred(stressall(m, zero(σ), dϵ))
                 σ, st = ret.σ, ret.status
-                @test st.plastic && st.tensioncollapsed
+                @test st.plastic && st.tensioncollapse
                 σ
             end
             m = @inferred DruckerPrager(elastic, mc_type, c = 20.0, ϕ = deg2rad(30), ψ = deg2rad(10), tensioncutoff = 20.0)
