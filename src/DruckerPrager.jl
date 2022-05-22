@@ -88,7 +88,7 @@ end
     p_t = model.tensioncutoff
     if f_trial ≤ 0.0 && mean(σ_trial) ≤ p_t
         σ = σ_trial
-        return (; σ, status = (plastic = false, tensioncollapsed = false))
+        return (; σ, status = (plastic = false, tensioncollapse = false))
     end
     dgdσ = @matcalc(:plasticflow, model; σ = σ_trial)
     dλ = f_trial / (dfdσ ⊡ D_e ⊡ dgdσ)
@@ -117,9 +117,9 @@ end
             a = A - B*p
             σ = p_t*I + a*normalize(s)
         end
-        return (; σ, status = (plastic = true, tensioncollapsed = true))
+        return (; σ, status = (plastic = true, tensioncollapse = true))
     end
-    (; σ, status = (plastic = true, tensioncollapsed = false))
+    (; σ, status = (plastic = true, tensioncollapse = false))
 end
 
 """
