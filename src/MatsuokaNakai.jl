@@ -65,12 +65,12 @@ Compute the stress and related variables as `NamedTuple`.
     σ_trial = @matcalc(:stress, model.elastic; ϵ = ϵᵉ_trial)
     if @matcalc(:yieldfunction, model; σ = σ_trial) ≤ 0.0
         σ = σ_trial
-        return (; σ, status = (plastic = false, converted = true))
+        return (; σ, status = (plastic = false, converged = true, tensioncollapse = false))
     end
 
     # plastic corrector
-    σ, converted = plastic_corrector(model, ϵᵉ_trial)
-    (; σ, status = (plastic = true, converted))
+    σ, converged = plastic_corrector(model, ϵᵉ_trial)
+    (; σ, status = (plastic = true, converged, tensioncollapse = !converged))
 end
 
 """
