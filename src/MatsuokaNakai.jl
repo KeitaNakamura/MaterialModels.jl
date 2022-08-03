@@ -23,53 +23,33 @@ function MatsuokaNakai(elastic::Elastic; c::Real, ϕ::Real, ψ::Real = ϕ, check
     MatsuokaNakai{Elastic}(elastic, α, β, B, c, ϕ, ψ)
 end
 
-function plastic_corrector(model, ϵᵉ_trial33::SymmetricSecondOrderTensor{3})::Tuple{SymmetricSecondOrderTensor{3, Float64}, Bool}
-    tol = sqrt(eps(Float64))
-
-    ϵᵉ_trial, m₁, m₂, m₃ = tospectral(ϵᵉ_trial33)
-    ϵᵉ = ϵᵉ_trial
-    Δγ = 0.0
-
-    for i in 1:20
-        σ = @matcalc(:stress, model.elastic; ϵ = ϵᵉ)
-        Cᵉ = @matcalc(:principal_compliance, model.elastic)
-        dfdσ, f = gradient(σ -> @matcalc(:yieldfunction, model; σ), σ, :all)
-        d²gdσ², dgdσ = gradient(σ -> @matcalc(:plasticflow, model; σ), σ, :all)
-
-        R = ϵᵉ - ϵᵉ_trial + Δγ*dgdσ
-        norm(R) < tol && abs(f) < tol && return (fromspectral(σ, m₁, m₂, m₃), true)
-
-        Ξ = inv(Cᵉ + Δγ * d²gdσ²)
-        dfdσ_Ξ = dfdσ ⋅ Ξ
-        dΔγ = (f - dfdσ_Ξ ⋅ R) / (dfdσ_Ξ ⋅ dgdσ)
-        dϵᵉ = Cᵉ ⋅ Ξ ⋅ (-R - dΔγ * dgdσ)
-
-        Δγ += dΔγ
-        ϵᵉ += dϵᵉ
-    end
-
-    # return tip
-    (model.α * one(SymmetricSecondOrderTensor{3}), false)
-end
-
 """
     @matcalc(:stressall, model::MatsuokaNakai{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
 
 Compute the stress and related variables as `NamedTuple`.
 """
 @matcalc_def function stressall(model::MatsuokaNakai{LinearElastic}; σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})
+    α, β = model.α, model.β
+
     ϵᵉ = @matcalc(:strain, model.elastic; σ)
 
     # elastic predictor
     ϵᵉ_trial = ϵᵉ + dϵ
     σ_trial = @matcalc(:stress, model.elastic; ϵ = ϵᵉ_trial)
+
+    σ_tip = α * one(σ_trial)
+    I₁, I₂, I₃ = stress_invariants(σ_trial - σ_tip)
+    if !(I₁ ≤ 0 && I₂ ≥ 0 && I₃ ≤ 0)
+        return (; σ = σ_tip, status = (plastic = true, converged = true, tensioncollapse = true))
+    end
+
     if @matcalc(:yieldfunction, model; σ = σ_trial) ≤ 0.0
         σ = σ_trial
         return (; σ, status = (plastic = false, converged = true, tensioncollapse = false))
     end
 
     # plastic corrector
-    σ, converged = plastic_corrector(model, ϵᵉ_trial)
+    σ, converged = plastic_corrector(model, σ_trial; default = σ_tip)
     (; σ, status = (plastic = true, converged, tensioncollapse = !converged))
 end
 

@@ -90,6 +90,7 @@ end
         σ = σ_trial
         return (; σ, status = (plastic = false, tensioncollapse = false))
     end
+    # σ, converged = plastic_corrector(model, σ_trial; default = Inf*one(σ_trial))
     dgdσ = @matcalc(:plasticflow, model; σ = σ_trial)
     dλ = f_trial / (dfdσ ⊡ D_e ⊡ dgdσ)
     dϵ_p = dλ * dgdσ
@@ -147,7 +148,7 @@ end
 
 Compute the yield function.
 """
-@matcalc_def function yieldfunction(model::DruckerPrager; σ::SymmetricSecondOrderTensor{3})
+@matcalc_def function yieldfunction(model::DruckerPrager; σ::Union{SymmetricSecondOrderTensor{3}, Vec{3}})
     A, B = model.A, model.B
     p = mean(σ)
     s = dev(σ)
@@ -159,14 +160,14 @@ end
 
 Compute the plastic flow (the gradient of plastic potential function in stress space, i.e., ``\\partial{g}/\\partial{\\sigma}``).
 """
-@matcalc_def function plasticflow(model::DruckerPrager; σ::SymmetricSecondOrderTensor{3})
+@matcalc_def function plasticflow(model::DruckerPrager; σ::Union{Vec{3}, SymmetricSecondOrderTensor{3}})
     b = model.b
     s = dev(σ)
     s_norm = norm(s)
     if s_norm < sqrt(eps(eltype(σ)))
-        dgdσ = b/3 * one(σ)
+        dgdσ = b/3 * delta(σ)
     else
-        dgdσ = s/s_norm + b/3 * one(σ)
+        dgdσ = s/s_norm + b/3 * delta(σ)
     end
     dgdσ
 end

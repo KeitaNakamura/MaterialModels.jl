@@ -73,6 +73,51 @@ function fromspectral(σ::Vec{3}, m₁::SymmetricSecondOrderTensor{3}, m₂::Sym
     σ[1]*m₁ + σ[2]*m₂ + σ[3]*m₃
 end
 
+function return_mapping(m::MaterialModel, σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3}; default)
+    σ_trial, plastic = elastic_predictor(m, σ, dϵ)
+    if plastic
+        σ, converged = plastic_corrector(m, σ; default)
+        (; σ, converged)
+    else
+        (; σ = σ_trial, converged = true)
+    end
+end
+
+function elastic_predictor(m::MaterialModel, σ::SymmetricSecondOrderTensor{3}, dϵ::SymmetricSecondOrderTensor{3})::Tuple{SymmetricSecondOrderTensor{3, Float64}, Bool}
+    σ_trial = @matcalc(:stress, m.elastic; σ, dϵ)
+    plastic = @matcalc(:yieldfunction, m; σ = σ_trial) > 0.0
+    σ_trial, plastic
+end
+
+function plastic_corrector(m::MaterialModel, σ_trial::SymmetricSecondOrderTensor{3}; default)::Tuple{SymmetricSecondOrderTensor{3, Float64}, Bool}
+    tol = sqrt(eps(Float64))
+
+    ϵᵉ_trial, m₁, m₂, m₃ = tospectral(@matcalc(:strain, m.elastic; σ = σ_trial))
+    ϵᵉ = ϵᵉ_trial
+    Δγ = 0.0
+
+    for i in 1:20
+        σ = @matcalc(:stress, m.elastic; ϵ = ϵᵉ)
+        Cᵉ = @matcalc(:principal_compliance, m.elastic)
+        dfdσ, f = gradient(σ -> @matcalc(:yieldfunction, m; σ), σ, :all)
+        d²gdσ², dgdσ = gradient(σ -> @matcalc(:plasticflow, m; σ), σ, :all)
+
+        R = ϵᵉ - ϵᵉ_trial + Δγ*dgdσ
+        norm(R) < tol && abs(f) < tol && return (fromspectral(σ, m₁, m₂, m₃), true)
+
+        Ξ = inv(Cᵉ + Δγ * d²gdσ²)
+        dfdσ_Ξ = dfdσ ⋅ Ξ
+        dΔγ = (f - dfdσ_Ξ ⋅ R) / (dfdσ_Ξ ⋅ dgdσ)
+        dϵᵉ = Cᵉ ⋅ Ξ ⋅ (-R - dΔγ * dgdσ)
+
+        Δγ += dΔγ
+        ϵᵉ += dϵᵉ
+    end
+
+    # return tip
+    (default, false)
+end
+
 # identity unit tensors
 delta(x::Type{<: Vec{3}}) = ones(x)
 delta(x::Type{<: @Tensor{3,3}}) = one(x)
